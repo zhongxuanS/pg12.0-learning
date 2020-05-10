@@ -688,6 +688,8 @@ interpret_func_support(DefElem *defel)
 /*
  * Dissect the list of options assembled in gram.y into function
  * attributes.
+ *
+ * pstate在这里只是为了保证报错的时候有函数原始字符串信息，好定位报错位置。
  */
 static void
 compute_function_attributes(ParseState *pstate,
@@ -954,6 +956,9 @@ CreateFunction(ParseState *pstate, CreateFunctionStmt *stmt)
 	char		parallel;
 
 	/* Convert list of names to a name and namespace */
+	/*
+	 * 函数名可以有命名空间，比如说oracle.foo。这段逻辑就是去找命名空间
+	 */
 	namespaceId = QualifiedNameGetCreationNamespace(stmt->funcname,
 													&funcname);
 
@@ -976,6 +981,11 @@ CreateFunction(ParseState *pstate, CreateFunctionStmt *stmt)
 	parallel = PROPARALLEL_UNSAFE;
 
 	/* Extract non-default attributes from stmt->options list */
+	/*
+	 * 我觉得PG上面的non-default不对,其实上面的代码就是设置了几个属性的默认值
+	 * 这个函数负责从SQL中获取创建函数时的设置选项，并且顺带做了语法检查，比如说
+	 * 设置参数不能写多个。
+	 */
 	compute_function_attributes(pstate,
 								stmt->is_procedure,
 								stmt->options,
@@ -986,6 +996,9 @@ CreateFunction(ParseState *pstate, CreateFunctionStmt *stmt)
 								&prosupport, &parallel);
 
 	/* Look up the language and validate permissions */
+	/*
+	 * PG中支持的函数语言都在pg_language表中，根据语言名就可以找到有无对应语言
+	 */
 	languageTuple = SearchSysCache1(LANGNAME, PointerGetDatum(language));
 	if (!HeapTupleIsValid(languageTuple))
 		ereport(ERROR,
@@ -997,6 +1010,11 @@ CreateFunction(ParseState *pstate, CreateFunctionStmt *stmt)
 	languageStruct = (Form_pg_language) GETSTRUCT(languageTuple);
 	languageOid = languageStruct->oid;
 
+	/*
+	 * 根据语言是否可信，来决定当前用户有没有执行权限。
+	 * 如果一个语言在创建的时候指定是不可信得话，只有超级用户才能创建该语言的函数
+	 * TODO: 如果创建语言的时候说是可信的，但是该语言可以修改系统权限，漏洞？？
+	 */
 	if (languageStruct->lanpltrusted)
 	{
 		/* if trusted language, need USAGE privilege */
@@ -1015,6 +1033,7 @@ CreateFunction(ParseState *pstate, CreateFunctionStmt *stmt)
 						   NameStr(languageStruct->lanname));
 	}
 
+	// 获取这个函数是因为创建函数的时候需要先确认函数body语法
 	languageValidator = languageStruct->lanvalidator;
 
 	ReleaseSysCache(languageTuple);
