@@ -1042,12 +1042,17 @@ CreateFunction(ParseState *pstate, CreateFunctionStmt *stmt)
 	 * Only superuser is allowed to create leakproof functions because
 	 * leakproof functions can see tuples which have not yet been filtered out
 	 * by security barrier views or row level security policies.
+	 *
+	 * 只有超级用户才能创建leakproof函数
 	 */
 	if (isLeakProof && !superuser())
 		ereport(ERROR,
 				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
 				 errmsg("only superuser can define a leakproof function")));
 
+	/*
+	 * 处理transform属性，这个属性是用来处理非SQL语言中的数据结构怎么转成SQL中的结构
+	 */
 	if (transformDefElem)
 	{
 		ListCell   *lc;
@@ -1068,6 +1073,12 @@ CreateFunction(ParseState *pstate, CreateFunctionStmt *stmt)
 	/*
 	 * Convert remaining parameters of CREATE to form wanted by
 	 * ProcedureCreate.
+	 *
+	 * 这个函数负责处理函数的参数信息。PG中函数参数信息比较复杂，分为几种类型
+	 * 1. 参数类型：IN,OUT,INOUT,VARIADIC
+	 * 2. 有名、无名参数
+	 * 3. 默认参数
+	 * 4. 参数类型可以是基本类型、组合类型、域类型、表中某一列的数据类型、
 	 */
 	interpret_function_parameter_list(pstate,
 									  stmt->parameters,
