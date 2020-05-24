@@ -1,8 +1,22 @@
 cmake_minimum_required(VERSION 3.16)
 project(postgresql_12_0)
 
-set(CMAKE_C_STANDARD 90)
+set(CMAKE_CXX_STANDARD 14)
 
+include_directories(contrib/bloom)
+include_directories(contrib/btree_gist)
+include_directories(contrib/cube)
+include_directories(contrib/hstore)
+include_directories(contrib/intarray)
+include_directories(contrib/isn)
+include_directories(contrib/ltree)
+include_directories(contrib/pageinspect)
+include_directories(contrib/pg_trgm)
+include_directories(contrib/pgcrypto)
+include_directories(contrib/postgres_fdw)
+include_directories(contrib/seg)
+include_directories(contrib/sepgsql)
+include_directories(contrib/tablefunc)
 include_directories(src/backend/catalog)
 include_directories(src/backend/parser)
 include_directories(src/backend/storage/lmgr)
@@ -68,9 +82,205 @@ include_directories(src/pl/plpgsql/src)
 include_directories(src/pl/plpython)
 include_directories(src/pl/tcl)
 include_directories(src/port)
+include_directories(src/test/isolation)
+include_directories(src/test/modules/test_rls_hooks)
+include_directories(src/test/modules/test_shm_mq)
+include_directories(src/test/regress)
 include_directories(src/timezone)
 
 add_executable(postgresql_12_0
+        contrib/adminpack/adminpack.c
+        contrib/amcheck/verify_nbtree.c
+        contrib/auth_delay/auth_delay.c
+        contrib/auto_explain/auto_explain.c
+        contrib/bloom/blcost.c
+        contrib/bloom/blinsert.c
+        contrib/bloom/bloom.h
+        contrib/bloom/blscan.c
+        contrib/bloom/blutils.c
+        contrib/bloom/blvacuum.c
+        contrib/bloom/blvalidate.c
+        contrib/btree_gin/btree_gin.c
+        contrib/btree_gist/btree_bit.c
+        contrib/btree_gist/btree_bytea.c
+        contrib/btree_gist/btree_cash.c
+        contrib/btree_gist/btree_date.c
+        contrib/btree_gist/btree_enum.c
+        contrib/btree_gist/btree_float4.c
+        contrib/btree_gist/btree_float8.c
+        contrib/btree_gist/btree_gist.c
+        contrib/btree_gist/btree_gist.h
+        contrib/btree_gist/btree_inet.c
+        contrib/btree_gist/btree_int2.c
+        contrib/btree_gist/btree_int4.c
+        contrib/btree_gist/btree_int8.c
+        contrib/btree_gist/btree_interval.c
+        contrib/btree_gist/btree_macaddr.c
+        contrib/btree_gist/btree_macaddr8.c
+        contrib/btree_gist/btree_numeric.c
+        contrib/btree_gist/btree_oid.c
+        contrib/btree_gist/btree_text.c
+        contrib/btree_gist/btree_time.c
+        contrib/btree_gist/btree_ts.c
+        contrib/btree_gist/btree_utils_num.c
+        contrib/btree_gist/btree_utils_num.h
+        contrib/btree_gist/btree_utils_var.c
+        contrib/btree_gist/btree_utils_var.h
+        contrib/btree_gist/btree_uuid.c
+        contrib/citext/citext.c
+        contrib/cube/cube.c
+        contrib/cube/cubedata.h
+        contrib/cube/cubeparse.c
+        contrib/cube/cubescan.c
+        contrib/dblink/dblink.c
+        contrib/dict_int/dict_int.c
+        contrib/dict_xsyn/dict_xsyn.c
+        contrib/earthdistance/earthdistance.c
+        contrib/file_fdw/file_fdw.c
+        contrib/fuzzystrmatch/dmetaphone.c
+        contrib/fuzzystrmatch/fuzzystrmatch.c
+        contrib/hstore/hstore.h
+        contrib/hstore/hstore_compat.c
+        contrib/hstore/hstore_gin.c
+        contrib/hstore/hstore_gist.c
+        contrib/hstore/hstore_io.c
+        contrib/hstore/hstore_op.c
+        contrib/hstore_plperl/hstore_plperl.c
+        contrib/hstore_plpython/hstore_plpython.c
+        contrib/intarray/_int.h
+        contrib/intarray/_int_bool.c
+        contrib/intarray/_int_gin.c
+        contrib/intarray/_int_gist.c
+        contrib/intarray/_int_op.c
+        contrib/intarray/_int_selfuncs.c
+        contrib/intarray/_int_tool.c
+        contrib/intarray/_intbig_gist.c
+        contrib/isn/EAN13.h
+        contrib/isn/ISBN.h
+        contrib/isn/ISMN.h
+        contrib/isn/isn.c
+        contrib/isn/isn.h
+        contrib/isn/ISSN.h
+        contrib/isn/UPC.h
+        contrib/jsonb_plperl/jsonb_plperl.c
+        contrib/jsonb_plpython/jsonb_plpython.c
+        contrib/lo/lo.c
+        contrib/ltree/_ltree_gist.c
+        contrib/ltree/_ltree_op.c
+        contrib/ltree/crc32.c
+        contrib/ltree/crc32.h
+        contrib/ltree/lquery_op.c
+        contrib/ltree/ltree.h
+        contrib/ltree/ltree_gist.c
+        contrib/ltree/ltree_io.c
+        contrib/ltree/ltree_op.c
+        contrib/ltree/ltxtquery_io.c
+        contrib/ltree/ltxtquery_op.c
+        contrib/ltree_plpython/ltree_plpython.c
+        contrib/oid2name/oid2name.c
+        contrib/pageinspect/brinfuncs.c
+        contrib/pageinspect/btreefuncs.c
+        contrib/pageinspect/fsmfuncs.c
+        contrib/pageinspect/ginfuncs.c
+        contrib/pageinspect/hashfuncs.c
+        contrib/pageinspect/heapfuncs.c
+        contrib/pageinspect/pageinspect.h
+        contrib/pageinspect/rawpage.c
+        contrib/passwordcheck/passwordcheck.c
+        contrib/pg_buffercache/pg_buffercache_pages.c
+        contrib/pg_freespacemap/pg_freespacemap.c
+        contrib/pg_prewarm/autoprewarm.c
+        contrib/pg_prewarm/pg_prewarm.c
+        contrib/pg_standby/pg_standby.c
+        contrib/pg_stat_statements/pg_stat_statements.c
+        contrib/pg_trgm/trgm.h
+        contrib/pg_trgm/trgm_gin.c
+        contrib/pg_trgm/trgm_gist.c
+        contrib/pg_trgm/trgm_op.c
+        contrib/pg_trgm/trgm_regexp.c
+        contrib/pg_visibility/pg_visibility.c
+        contrib/pgcrypto/blf.c
+        contrib/pgcrypto/blf.h
+        contrib/pgcrypto/crypt-blowfish.c
+        contrib/pgcrypto/crypt-des.c
+        contrib/pgcrypto/crypt-gensalt.c
+        contrib/pgcrypto/crypt-md5.c
+        contrib/pgcrypto/imath.c
+        contrib/pgcrypto/imath.h
+        contrib/pgcrypto/internal-sha2.c
+        contrib/pgcrypto/internal.c
+        contrib/pgcrypto/mbuf.c
+        contrib/pgcrypto/mbuf.h
+        contrib/pgcrypto/md5.c
+        contrib/pgcrypto/md5.h
+        contrib/pgcrypto/openssl.c
+        contrib/pgcrypto/pgcrypto.c
+        contrib/pgcrypto/pgcrypto.h
+        contrib/pgcrypto/pgp-armor.c
+        contrib/pgcrypto/pgp-cfb.c
+        contrib/pgcrypto/pgp-compress.c
+        contrib/pgcrypto/pgp-decrypt.c
+        contrib/pgcrypto/pgp-encrypt.c
+        contrib/pgcrypto/pgp-info.c
+        contrib/pgcrypto/pgp-mpi-internal.c
+        contrib/pgcrypto/pgp-mpi-openssl.c
+        contrib/pgcrypto/pgp-mpi.c
+        contrib/pgcrypto/pgp-pgsql.c
+        contrib/pgcrypto/pgp-pubdec.c
+        contrib/pgcrypto/pgp-pubenc.c
+        contrib/pgcrypto/pgp-pubkey.c
+        contrib/pgcrypto/pgp-s2k.c
+        contrib/pgcrypto/pgp.c
+        contrib/pgcrypto/pgp.h
+        contrib/pgcrypto/px-crypt.c
+        contrib/pgcrypto/px-crypt.h
+        contrib/pgcrypto/px-hmac.c
+        contrib/pgcrypto/px.c
+        contrib/pgcrypto/px.h
+        contrib/pgcrypto/rijndael.c
+        contrib/pgcrypto/rijndael.h
+        contrib/pgcrypto/sha1.c
+        contrib/pgcrypto/sha1.h
+        contrib/pgrowlocks/pgrowlocks.c
+        contrib/pgstattuple/pgstatapprox.c
+        contrib/pgstattuple/pgstatindex.c
+        contrib/pgstattuple/pgstattuple.c
+        contrib/postgres_fdw/connection.c
+        contrib/postgres_fdw/deparse.c
+        contrib/postgres_fdw/option.c
+        contrib/postgres_fdw/postgres_fdw.c
+        contrib/postgres_fdw/postgres_fdw.h
+        contrib/postgres_fdw/shippable.c
+        contrib/seg/seg.c
+        contrib/seg/segdata.h
+        contrib/seg/segparse.c
+        contrib/seg/segscan.c
+        contrib/sepgsql/database.c
+        contrib/sepgsql/dml.c
+        contrib/sepgsql/hooks.c
+        contrib/sepgsql/label.c
+        contrib/sepgsql/proc.c
+        contrib/sepgsql/relation.c
+        contrib/sepgsql/schema.c
+        contrib/sepgsql/selinux.c
+        contrib/sepgsql/sepgsql.h
+        contrib/sepgsql/uavc.c
+        contrib/spi/autoinc.c
+        contrib/spi/insert_username.c
+        contrib/spi/moddatetime.c
+        contrib/spi/refint.c
+        contrib/sslinfo/sslinfo.c
+        contrib/tablefunc/tablefunc.c
+        contrib/tablefunc/tablefunc.h
+        contrib/tcn/tcn.c
+        contrib/test_decoding/test_decoding.c
+        contrib/tsm_system_rows/tsm_system_rows.c
+        contrib/tsm_system_time/tsm_system_time.c
+        contrib/unaccent/unaccent.c
+        contrib/uuid-ossp/uuid-ossp.c
+        contrib/vacuumlo/vacuumlo.c
+        contrib/xml2/xpath.c
+        contrib/xml2/xslt_proc.c
         src/backend/access/brin/brin.c
         src/backend/access/brin/brin_inclusion.c
         src/backend/access/brin/brin_minmax.c
@@ -1169,69 +1379,133 @@ add_executable(postgresql_12_0
         src/include/catalog/opfam_internal.h
         src/include/catalog/partition.h
         src/include/catalog/pg_aggregate.h
+        src/include/catalog/pg_aggregate_d.h
         src/include/catalog/pg_am.h
+        src/include/catalog/pg_am_d.h
         src/include/catalog/pg_amop.h
+        src/include/catalog/pg_amop_d.h
         src/include/catalog/pg_amproc.h
+        src/include/catalog/pg_amproc_d.h
         src/include/catalog/pg_attrdef.h
+        src/include/catalog/pg_attrdef_d.h
         src/include/catalog/pg_attribute.h
+        src/include/catalog/pg_attribute_d.h
         src/include/catalog/pg_auth_members.h
+        src/include/catalog/pg_auth_members_d.h
         src/include/catalog/pg_authid.h
+        src/include/catalog/pg_authid_d.h
         src/include/catalog/pg_cast.h
+        src/include/catalog/pg_cast_d.h
         src/include/catalog/pg_class.h
+        src/include/catalog/pg_class_d.h
         src/include/catalog/pg_collation.h
+        src/include/catalog/pg_collation_d.h
         src/include/catalog/pg_constraint.h
+        src/include/catalog/pg_constraint_d.h
         src/include/catalog/pg_control.h
         src/include/catalog/pg_conversion.h
+        src/include/catalog/pg_conversion_d.h
         src/include/catalog/pg_database.h
+        src/include/catalog/pg_database_d.h
         src/include/catalog/pg_db_role_setting.h
+        src/include/catalog/pg_db_role_setting_d.h
         src/include/catalog/pg_default_acl.h
+        src/include/catalog/pg_default_acl_d.h
         src/include/catalog/pg_depend.h
+        src/include/catalog/pg_depend_d.h
         src/include/catalog/pg_description.h
+        src/include/catalog/pg_description_d.h
         src/include/catalog/pg_enum.h
+        src/include/catalog/pg_enum_d.h
         src/include/catalog/pg_event_trigger.h
+        src/include/catalog/pg_event_trigger_d.h
         src/include/catalog/pg_extension.h
+        src/include/catalog/pg_extension_d.h
         src/include/catalog/pg_foreign_data_wrapper.h
+        src/include/catalog/pg_foreign_data_wrapper_d.h
         src/include/catalog/pg_foreign_server.h
+        src/include/catalog/pg_foreign_server_d.h
         src/include/catalog/pg_foreign_table.h
+        src/include/catalog/pg_foreign_table_d.h
         src/include/catalog/pg_index.h
+        src/include/catalog/pg_index_d.h
         src/include/catalog/pg_inherits.h
+        src/include/catalog/pg_inherits_d.h
         src/include/catalog/pg_init_privs.h
+        src/include/catalog/pg_init_privs_d.h
         src/include/catalog/pg_language.h
+        src/include/catalog/pg_language_d.h
         src/include/catalog/pg_largeobject.h
+        src/include/catalog/pg_largeobject_d.h
         src/include/catalog/pg_largeobject_metadata.h
+        src/include/catalog/pg_largeobject_metadata_d.h
         src/include/catalog/pg_namespace.h
+        src/include/catalog/pg_namespace_d.h
         src/include/catalog/pg_opclass.h
+        src/include/catalog/pg_opclass_d.h
         src/include/catalog/pg_operator.h
+        src/include/catalog/pg_operator_d.h
         src/include/catalog/pg_opfamily.h
+        src/include/catalog/pg_opfamily_d.h
         src/include/catalog/pg_partitioned_table.h
+        src/include/catalog/pg_partitioned_table_d.h
         src/include/catalog/pg_pltemplate.h
+        src/include/catalog/pg_pltemplate_d.h
         src/include/catalog/pg_policy.h
+        src/include/catalog/pg_policy_d.h
         src/include/catalog/pg_proc.h
+        src/include/catalog/pg_proc_d.h
         src/include/catalog/pg_publication.h
+        src/include/catalog/pg_publication_d.h
         src/include/catalog/pg_publication_rel.h
+        src/include/catalog/pg_publication_rel_d.h
         src/include/catalog/pg_range.h
+        src/include/catalog/pg_range_d.h
         src/include/catalog/pg_replication_origin.h
+        src/include/catalog/pg_replication_origin_d.h
         src/include/catalog/pg_rewrite.h
+        src/include/catalog/pg_rewrite_d.h
         src/include/catalog/pg_seclabel.h
+        src/include/catalog/pg_seclabel_d.h
         src/include/catalog/pg_sequence.h
+        src/include/catalog/pg_sequence_d.h
         src/include/catalog/pg_shdepend.h
+        src/include/catalog/pg_shdepend_d.h
         src/include/catalog/pg_shdescription.h
+        src/include/catalog/pg_shdescription_d.h
         src/include/catalog/pg_shseclabel.h
+        src/include/catalog/pg_shseclabel_d.h
         src/include/catalog/pg_statistic.h
+        src/include/catalog/pg_statistic_d.h
         src/include/catalog/pg_statistic_ext.h
+        src/include/catalog/pg_statistic_ext_d.h
         src/include/catalog/pg_statistic_ext_data.h
+        src/include/catalog/pg_statistic_ext_data_d.h
         src/include/catalog/pg_subscription.h
+        src/include/catalog/pg_subscription_d.h
         src/include/catalog/pg_subscription_rel.h
+        src/include/catalog/pg_subscription_rel_d.h
         src/include/catalog/pg_tablespace.h
+        src/include/catalog/pg_tablespace_d.h
         src/include/catalog/pg_transform.h
+        src/include/catalog/pg_transform_d.h
         src/include/catalog/pg_trigger.h
+        src/include/catalog/pg_trigger_d.h
         src/include/catalog/pg_ts_config.h
+        src/include/catalog/pg_ts_config_d.h
         src/include/catalog/pg_ts_config_map.h
+        src/include/catalog/pg_ts_config_map_d.h
         src/include/catalog/pg_ts_dict.h
+        src/include/catalog/pg_ts_dict_d.h
         src/include/catalog/pg_ts_parser.h
+        src/include/catalog/pg_ts_parser_d.h
         src/include/catalog/pg_ts_template.h
+        src/include/catalog/pg_ts_template_d.h
         src/include/catalog/pg_type.h
+        src/include/catalog/pg_type_d.h
         src/include/catalog/pg_user_mapping.h
+        src/include/catalog/pg_user_mapping_d.h
+        src/include/catalog/schemapg.h
         src/include/catalog/storage.h
         src/include/catalog/storage_xlog.h
         src/include/catalog/toasting.h
@@ -1677,6 +1951,7 @@ add_executable(postgresql_12_0
         src/include/utils/dsa.h
         src/include/utils/dynahash.h
         src/include/utils/elog.h
+        src/include/utils/errcodes.h
         src/include/utils/evtcache.h
         src/include/utils/expandeddatum.h
         src/include/utils/expandedrecord.h
@@ -2018,6 +2293,37 @@ add_executable(postgresql_12_0
         src/port/win32error.c
         src/port/win32security.c
         src/port/win32setlocale.c
+        src/test/examples/testlibpq.c
+        src/test/examples/testlibpq2.c
+        src/test/examples/testlibpq3.c
+        src/test/examples/testlibpq4.c
+        src/test/examples/testlo.c
+        src/test/examples/testlo64.c
+        src/test/isolation/isolation_main.c
+        src/test/isolation/isolationtester.c
+        src/test/isolation/isolationtester.h
+        src/test/isolation/specparse.c
+        src/test/isolation/specscanner.c
+        src/test/locale/test-ctype.c
+        src/test/modules/dummy_seclabel/dummy_seclabel.c
+        src/test/modules/test_bloomfilter/test_bloomfilter.c
+        src/test/modules/test_ddl_deparse/test_ddl_deparse.c
+        src/test/modules/test_integerset/test_integerset.c
+        src/test/modules/test_parser/test_parser.c
+        src/test/modules/test_predtest/test_predtest.c
+        src/test/modules/test_rbtree/test_rbtree.c
+        src/test/modules/test_rls_hooks/test_rls_hooks.c
+        src/test/modules/test_rls_hooks/test_rls_hooks.h
+        src/test/modules/test_shm_mq/setup.c
+        src/test/modules/test_shm_mq/test.c
+        src/test/modules/test_shm_mq/test_shm_mq.h
+        src/test/modules/test_shm_mq/worker.c
+        src/test/modules/worker_spi/worker_spi.c
+        src/test/regress/pg_regress.c
+        src/test/regress/pg_regress.h
+        src/test/regress/pg_regress_main.c
+        src/test/regress/regress.c
+        src/test/thread/thread_test.c
         src/timezone/localtime.c
         src/timezone/pgtz.c
         src/timezone/pgtz.h

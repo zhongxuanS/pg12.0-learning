@@ -1,27 +1,12 @@
-PostgreSQL Database Management System
-=====================================
+### 概要
+用来学习PG代码，PG代码很值得学习，想通过关注各种小功能点的方式来学习。
+因为业务太复杂，想一次性学习完太难太难。
 
-This directory contains the source code distribution of the PostgreSQL
-database management system.
-
-PostgreSQL is an advanced object-relational database management system
-that supports an extended subset of the SQL standard, including
-transactions, foreign keys, subqueries, triggers, user-defined types
-and functions.  This distribution also contains C language bindings.
-
-PostgreSQL has many language interfaces, many of which are listed here:
-
-	https://www.postgresql.org/download
-
-See the file INSTALL for instructions on how to build and install
-PostgreSQL.  That file also lists supported operating systems and
-hardware platforms and contains information regarding any other
-software packages that are required to build or run the PostgreSQL
-system.  Copyright and license information can be found in the
-file COPYRIGHT.  A comprehensive documentation set is included in this
-distribution; it can be read as described in the installation
-instructions.
-
-The latest version of this software may be obtained at
-https://www.postgresql.org/download/.  For more information look at our
-web site located at https://www.postgresql.org/.
+### TODO:
+- [ ] 创建函数
+- [ ] 解析函数调用
+- [ ] 内存上下文
+- [ ] 异常处理
+- [ ] 列表
+- [ ] hash表
+- [ ] 系统表缓存机制

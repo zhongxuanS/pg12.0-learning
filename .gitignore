@@ -44,3 +44,4 @@ lib*.pc
 /tmp_install/
 /cmake-build-debug/
 /.idea/
+/venv/
