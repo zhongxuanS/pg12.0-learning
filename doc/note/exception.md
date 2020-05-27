@@ -48,5 +48,177 @@ something wrong
 
 ```
 
+在执行完`longjmp`后，又回到了`setjmp`函数，并且`setjmp`函数返回值是执行`longjmp`函数
+的`value`参数。
+
+这样的话我们可以用这个机制来模拟一把`try...catch`。
+
+```c
+#include <stdio.h>
+#include <setjmp.h>
+
+jmp_buf buf;
+
+void ereport(const char* errmsg)
+{
+    printf("ERROR: errmsg: %s\n", errmsg);
+    longjmp(buf, 1);
+}
+
+#define TRY() \
+    do { \
+        if(setjmp(buf) == 0) \
+        {
+#define CATCH() \
+        } \
+        else \
+        {
+#define END_TRY() \
+        } \
+    } while(0)
+
+int main()
+{
+    TRY()
+    {
+        // dosomethind()
+        // throw error
+        ereport("somethind wrong!!");
+    }
+    CATCH()
+    {
+        printf("catch error");
+    }
+    END_TRY();
+    return 0;
+}
+
+```
+
+```text
+ERROR: errmsg: somethind wrong!!
+catch error
+```
+
+是不是有几分神似了。但是使用这种方式只能catch到调用`longjmp`的场景，代码里面如果出现了段错误怎么办？
+这个时候就要用到Linux里面的信号机制了。
+
+我们在try代码里面给`SIGSEGV`安装上一个handler。在这个handler里面调用`longjump`，这样就可以把段错误
+给catch住。
+
+下面看一个例子：
+```c
+#include <stdio.h>
+#include <setjmp.h>
+#include <signal.h>
+
+jmp_buf buf;
+
+void ereport(const char* errmsg)
+{
+    printf("ERROR: errmsg: %s\n", errmsg);
+    longjmp(buf, 1);
+}
+
+void sig_segv_handler(int signum)
+{
+    printf("signum: %d\n", signum);
+}
+
+#define TRY() \
+    do { \
+        if(setjmp(buf) == 0) \
+        {
+#define CATCH() \
+        } \
+        else \
+        {
+#define END_TRY() \
+        } \
+    } while(0)
+
+int main()
+{
+    TRY()
+    {
+        signal(SIGSEGV, sig_segv_handler);
+        int *p = NULL;
+        *p = 1;
+    }
+    CATCH()
+    {
+        printf("catch error");
+    }
+    END_TRY();
+    return 0;
+}
+
+```
+
+```text
+signum: 11
+signum: 11
+....
+```
+一直会输出`signum: 11`。这是因为在发生段错误的时候会跳入对应的handler，当handler函数结束后，又会回到发生段错误
+的地方继续执行。这样的话就又会发生段错误。显然，我们的目的是不能再回到段错误的地方执行了，要跳到catch里面。
+这时候就可以在handler里面调用`longjmp`函数就可以了。
+
+```c
+#include <stdio.h>
+#include <setjmp.h>
+#include <signal.h>
+
+jmp_buf buf;
+
+void ereport(const char* errmsg)
+{
+    printf("ERROR: errmsg: %s\n", errmsg);
+    longjmp(buf, 1);
+}
+
+void sig_segv_handler(int signum)
+{
+    printf("signum: %d\n", signum);
+    longjmp(buf, 1);
+}
+
+#define TRY() \
+    do { \
+        if(setjmp(buf) == 0) \
+        {
+#define CATCH() \
+        } \
+        else \
+        {
+#define END_TRY() \
+        } \
+    } while(0)
+
+int main()
+{
+    TRY()
+    {
+        signal(SIGSEGV, sig_segv_handler);
+        int *p = NULL;
+        *p = 1;
+    }
+    CATCH()
+    {
+        printf("catch error");
+    }
+    END_TRY();
+    return 0;
+}
+
+```
+
+```text
+signum: 11
+catch error
+```
+
+但是上面的例子还有有问题，我们来看一个场景：
+
 ### 使用场景
 ### 如何实现
