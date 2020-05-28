@@ -219,6 +219,66 @@ catch error
 ```
 
 但是上面的例子还有有问题，我们来看一个场景：
+```c
+#include <stdio.h>
+#include <setjmp.h>
+#include <signal.h>
+
+jmp_buf buf;
+
+void ereport(const char* errmsg)
+{
+    printf("ERROR: errmsg: %s\n", errmsg);
+    longjmp(buf, 1);
+}
+
+void sig_segv_handler(int signum)
+{
+    printf("signum: %d\n", signum);
+    longjmp(buf, 1);
+}
+
+#define TRY() \
+    do { \
+        if(setjmp(buf) == 0) \
+        {
+#define CATCH() \
+        } \
+        else \
+        {
+#define END_TRY() \
+        } \
+    } while(0)
+
+int main()
+{
+    for (int i = 0; i < 2; ++i)
+    {
+        TRY()
+        {
+            signal(SIGSEGV, sig_segv_handler);
+            int *p = NULL;
+            *p = 1;
+        }
+        CATCH()
+        {
+            printf("catch error");
+        }
+        END_TRY();
+    }
+    return 0;
+}
+
+```
+
+```text
+signum: 11
+
+Process finished with exit code 139 (interrupted by signal 11: SIGSEGV)
+```
+
+好像失效了。并没有catch到错误。但是应该输出一次`catch error`才对，这是为什么呢？这是因为
+printf没有加上`\n`。这会导致字符串还在buffer中，没有强制刷新到终端显示。
 
 ### 使用场景
 ### 如何实现
