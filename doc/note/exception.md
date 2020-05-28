@@ -280,5 +280,132 @@ Process finished with exit code 139 (interrupted by signal 11: SIGSEGV)
 好像失效了。并没有catch到错误。但是应该输出一次`catch error`才对，这是为什么呢？这是因为
 printf没有加上`\n`。这会导致字符串还在buffer中，没有强制刷新到终端显示。
 
+```c
+#include <stdio.h>
+#include <setjmp.h>
+#include <signal.h>
+
+jmp_buf buf;
+
+void ereport(const char *errmsg)
+{
+    printf("ERROR: errmsg: %s\n", errmsg);
+    longjmp(buf, 1);
+}
+
+void sig_segv_handler(int signum)
+{
+    printf("signum: %d\n", signum);
+    longjmp(buf, 1);
+}
+
+#define TRY() \
+    do { \
+        if(setjmp(buf) == 0) \
+        {
+#define CATCH() \
+        } \
+        else \
+        {
+#define END_TRY() \
+        } \
+    } while(0)
+
+int main()
+{
+    for (int i = 0; i < 2; ++i)
+    {
+        TRY()
+        {
+            signal(SIGSEGV, sig_segv_handler);
+            int *p = NULL;
+            *p = 1;
+        }
+        CATCH()
+        {
+            printf("catch error\n");
+        }
+        END_TRY();
+    }
+    return 0;
+}
+
+```
+
+```text
+signum: 11
+catch error
+```
+还有一个问题，为什么只出现了一次呢？这是因为`setjmp`函数对信号的影响。如果一个信号被加入了信号屏蔽表的话，后续继续给这个
+信号绑定handler是无效的。`setjmp`函数是否会对信号有影响，这个是未定义的，每个平台都不一样。
+` POSIX  does  not  specify whether setjmp() will save the signal mask (to be later restored during longjmp()).`
+所以我们要用另外一套函数`sigsetjmp`和`siglongjmp`。这套函数可以指定是否恢复原来的信号表。
+
+下面看一个例子：
+```c
+#include <stdio.h>
+#include <setjmp.h>
+#include <signal.h>
+
+sigjmp_buf buf;
+
+void ereport(const char *errmsg)
+{
+    printf("ERROR: errmsg: %s\n", errmsg);
+    siglongjmp(buf, 1);
+}
+
+void sig_segv_handler(int signum)
+{
+    printf("signum: %d\n", signum);
+    siglongjmp(buf, 1);
+}
+
+#define TRY() \
+    do { \
+        if(sigsetjmp(buf, 1) == 0) \
+        {
+#define CATCH() \
+        } \
+        else \
+        {
+#define END_TRY() \
+        } \
+    } while(0)
+
+int main()
+{
+    for (int i = 0; i < 2; ++i)
+    {
+        TRY()
+        {
+            signal(SIGSEGV, sig_segv_handler);
+            int *p = NULL;
+            *p = 1;
+        }
+        CATCH()
+        {
+            printf("catch error\n");
+        }
+        END_TRY();
+    }
+    return 0;
+}
+
+```
+
+```text
+signum: 11
+catch error
+signum: 11
+catch error
+```
+
+这一次结果就正确了。这是因为我们设置了`sigsetjmp`的参数为1，这样的话会保存当前信号表，并在`siglongjmp`调用后恢复。
+我们可以试试设置为0的情况，其结果和使用`setjmp`一样，不过这并不代表什么。`setjmp`在每个平台行为不一样，他对信号的行为
+是未定义的。
+
+至此，基础的东西讲完了。那么在PG中有哪些应用场景呢？
+
 ### 使用场景
 ### 如何实现
