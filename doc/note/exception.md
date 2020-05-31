@@ -419,4 +419,104 @@ catch error
 ```
 如果在解析表达式的时候发现表达式的语法不对，此时应该退出执行流，并且释放资源。我们当然可以在解析fromList中调用解析表达式代码的下面去释放资源。
 但是这样的问题是释放资源的代码会很零散。
+
+最好的方式是业务代码里面只负责抛出异常，框架代码负责统一处理异常。
+
+PG里面就是这么干的，在PG里面如果业务逻辑走不下去就会通过ereport来抛出ERROR异常，PG会把ERROR接住，然后统一释放资源。
+
+比如：
+```c
+ereport(ERROR,
+						(errcode(ERRCODE_SYNTAX_ERROR),
+						 errmsg("positional argument cannot follow named argument"),
+						 parser_errposition(pstate, exprLocation(arg))));
+```
+PG会先打印日志，然后退出当前业务流程并释放资源。
+
++ 如果全部异常都只有一个地方处理也不合理，我们需要在某些代码块中自己处理一些异常，比如说修改一些变量值，释放一些资源。最后交给框架的全局异常处理去释放
+全局的资源。
+
+总结来说，我们的需求有2点：
++ 全局异常处理机制
++ 局部异常处理机制
 ### 如何实现
++ 全局异常处理机制可以在系统启动的时候设置`sigsetjmp`函数。
++ 局部异常处理机制可以在局部函数中使用`sigsetjmp`函数，不过需要注意的是在局部异常处理的时候不需要恢复信号表，因为全局处理函数会去处理。
+
+下面看一下PG是如何实现的：
+PG在PostgresMain函数中新建了一个`local_sigjmp_buf`变量，然后注册了`sigsetjmp`并且把指针给了一个全局变量`PG_exception_stack`，这个全局
+变量会被ereport函数使用。
+```c
+if (sigsetjmp(local_sigjmp_buf, 1) != 0)
+{
+    .....
+}
+PG_exception_stack = &local_sigjmp_buf;
+```
+
+在elog文件中的`pg_re_throw(void)`函数中调用了`siglongjmp`函数来返回当初设置的地方。
+```c
+if (PG_exception_stack != NULL)
+    siglongjmp(*PG_exception_stack, 1);
+```
+如果我们在代码中使用ereport来抛出ERROR异常的话，就会通过上面的方式来达到清理资源的目的。
+
+那么针对局部的异常处理场景，PG中提供了PG_TRY宏来处理。PG_TRY宏主要应用场景为：当要执行的代码中可能会有ERROR异常抛出，但是我们想在全局异常处理之前
+先做一些处理逻辑。
+比如说执行一个PLPGSQL函数的时候，我们希望该函数如果执行出错的话，先释放一些资源。
+```c
+PG_TRY();
+	{
+		/*
+		 * Determine if called as function or trigger and call appropriate
+		 * subhandler
+		 */
+		if (CALLED_AS_TRIGGER(fcinfo))
+			retval = PointerGetDatum(plpgsql_exec_trigger(func,
+														  (TriggerData *) fcinfo->context));
+		else if (CALLED_AS_EVENT_TRIGGER(fcinfo))
+		{
+			plpgsql_exec_event_trigger(func,
+									   (EventTriggerData *) fcinfo->context);
+			retval = (Datum) 0;
+		}
+		else
+			retval = plpgsql_exec_function(func, fcinfo, NULL, !nonatomic);
+	}
+	PG_CATCH();
+	{
+		/* Decrement use-count, restore cur_estate, and propagate error */
+		func->use_count--;
+		func->cur_estate = save_cur_estate;
+		PG_RE_THROW();
+	}
+	PG_END_TRY();
+
+```
+
+PG中实现PG_TRY的方式为先声明一个局部变量去替换全局的`PG_exception_stack`，但是注册的时候不设置信号屏蔽表，因为在PG_RE_THROW调用后会走到全局
+的异常处理，在那边会去恢复信号屏蔽表。
+
+```c
+#define PG_TRY()  \
+	do { \
+		sigjmp_buf *save_exception_stack = PG_exception_stack; \
+		ErrorContextCallback *save_context_stack = error_context_stack; \
+		sigjmp_buf local_sigjmp_buf; \
+		if (sigsetjmp(local_sigjmp_buf, 0) == 0) \
+		{ \
+			PG_exception_stack = &local_sigjmp_buf
+
+#define PG_CATCH()	\
+		} \
+		else \
+		{ \
+			PG_exception_stack = save_exception_stack; \
+			error_context_stack = save_context_stack
+
+#define PG_END_TRY()  \
+		} \
+		PG_exception_stack = save_exception_stack; \
+		error_context_stack = save_context_stack; \
+	} while (0)
+```
