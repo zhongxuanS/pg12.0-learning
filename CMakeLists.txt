@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 project(postgresql_12_0)
 
 set(CMAKE_CXX_STANDARD 14)
+add_compile_definitions("-DFLEXIBLE_ARRAY_MEMBER=100")
 
 include_directories(contrib/bloom)
 include_directories(contrib/btree_gist)
