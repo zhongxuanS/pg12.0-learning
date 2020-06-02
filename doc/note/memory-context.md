@@ -88,4 +88,36 @@ typedef struct AllocSetContext
 `keeper`是用来保存哪些在重置该内存的时候不会被释放的block
 `freeListIndex`因为内存上下文反复申请也很浪费，所以PG把内存上下文也做了缓存。这个值就是用来保存内存上下文的缓存位置。
 
+每个Block中的内存用一个chunk来保存，在PG中就是`AllocChunkData`，具体结构如下：
+```c
+typedef struct AllocChunkData
+{
+	/* size is always the size of the usable space in the chunk */
+	Size		size;
+#ifdef MEMORY_CONTEXT_CHECKING
+	/* when debugging memory usage, also store actual requested size */
+	/* this is zero in a free chunk */
+	Size		requested_size;
+
+#define ALLOCCHUNK_RAWSIZE  (SIZEOF_SIZE_T * 2 + SIZEOF_VOID_P)
+#else
+#define ALLOCCHUNK_RAWSIZE  (SIZEOF_SIZE_T + SIZEOF_VOID_P)
+#endif							/* MEMORY_CONTEXT_CHECKING */
+
+	/* ensure proper alignment by adding padding if needed */
+#if (ALLOCCHUNK_RAWSIZE % MAXIMUM_ALIGNOF) != 0
+	char		padding[MAXIMUM_ALIGNOF - ALLOCCHUNK_RAWSIZE % MAXIMUM_ALIGNOF];
+#endif
+
+	/* aset is the owning aset if allocated, or the freelist link if free */
+	void	   *aset;
+	/* there must not be any padding to reach a MAXALIGN boundary here! */
+}			AllocChunkData;
+```
+`size`保存的是改chunk的大小，`requested_size`保存的是这个chunk被使用了多少。`aset`比较特殊，如果这个内存片被使用的话，这里保存的是从属于那个
+set，如果是空闲的话，保存的是freelist的头。
+
+总的来说其内存的结构如图：
+
+
 ### 精简版PG内存上下文
