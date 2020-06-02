@@ -21,5 +21,71 @@
 
 + 多次向操作系统申请内存，开销太大
   PG中会先申请一片内存，每次代码中申请内存的时候会直接从这个内存中划一片过去。省去了每次调用系统函数申请内存的过程。
+  
+下面看一下具体实现:
+```c
+typedef struct MemoryContextData
+{
+	NodeTag		type;			/* identifies exact kind of context */
+	/* these two fields are placed here to minimize alignment wastage: */
+	bool		isReset;		/* T = no space alloced since last reset */
+	bool		allowInCritSection; /* allow palloc in critical section */
+	const MemoryContextMethods *methods;	/* virtual function table */
+	MemoryContext parent;		/* NULL if no parent (toplevel context) */
+	MemoryContext firstchild;	/* head of linked list of children */
+	MemoryContext prevchild;	/* previous child of same parent */
+	MemoryContext nextchild;	/* next child of same parent */
+	const char *name;			/* context name (just for debugging) */
+	const char *ident;			/* context ID if any (just for debugging) */
+	MemoryContextCallback *reset_cbs;	/* list of reset/delete callbacks */
+} MemoryContextData;
+
+typedef struct MemoryContextMethods
+{
+	void	   *(*alloc) (MemoryContext context, Size size);
+	/* call this free_p in case someone #define's free() */
+	void		(*free_p) (MemoryContext context, void *pointer);
+	void	   *(*realloc) (MemoryContext context, void *pointer, Size size);
+	void		(*reset) (MemoryContext context);
+	void		(*delete_context) (MemoryContext context);
+	Size		(*get_chunk_space) (MemoryContext context, void *pointer);
+	bool		(*is_empty) (MemoryContext context);
+	void		(*stats) (MemoryContext context,
+						  MemoryStatsPrintFunc printfunc, void *passthru,
+						  MemoryContextCounters *totals);
+#ifdef MEMORY_CONTEXT_CHECKING
+	void		(*check) (MemoryContext context);
+#endif
+} MemoryContextMethods;
+```
+
+`MemoryContextData`是内存上下文的抽象类。其中methods是虚函数，每个实现该抽象类的实现类都要实现这几个函数。
+这个结构体我们主要关注`parent`、`firstChild`、`prevchild`和`nextchild`。这是因为PG中想让内存上下文有层级关系。具体表现就是一个树结构。在PG
+中有一个顶级的内存上下文`TopMemoryContext`，别的内存上下文都是挂在在它下面。
+
+在PG中实现该抽象类的实现类为：`AllocSetContext`
+```c
+typedef struct AllocSetContext
+{
+	MemoryContextData header;	/* Standard memory-context fields */
+	/* Info about storage allocated in this context: */
+	AllocBlock	blocks;			/* head of list of blocks in this set */
+	AllocChunk	freelist[ALLOCSET_NUM_FREELISTS];	/* free chunk lists */
+	/* Allocation parameters for this context: */
+	Size		initBlockSize;	/* initial block size */
+	Size		maxBlockSize;	/* maximum block size */
+	Size		nextBlockSize;	/* next block size to allocate */
+	Size		allocChunkLimit;	/* effective chunk size limit */
+	AllocBlock	keeper;			/* keep this block over resets */
+	/* freelist this context could be put in, or -1 if not a candidate: */
+	int			freeListIndex;	/* index in context_freelists[], or -1 */
+} AllocSetContext;
+```
+我们看到他把`MemoryContextData`放到了对象首部，这就是C语言中怎么去实现继承的方式。
+`blocks`用来保存多个内存块，PG中向操作系统申请的内存都用`AllocBlock`来管理，应用中申请的内存都是在这个结构体中划一块。
+`freelist`用来保存当前对象中有多少空闲内存，PG把内存按照2的次幂划分成了11个等级。从8字节开始到8192字节结束。每当有内存被释放的时候，如果被释放
+内存的大小是在这个范围内，就会被保存到对应的位置上。每个空位都是一个链表，也就是说相同大小的空闲内存会以链表的方式存放。
+`keeper`是用来保存哪些在重置该内存的时候不会被释放的block
+`freeListIndex`因为内存上下文反复申请也很浪费，所以PG把内存上下文也做了缓存。这个值就是用来保存内存上下文的缓存位置。
 
 ### 精简版PG内存上下文
