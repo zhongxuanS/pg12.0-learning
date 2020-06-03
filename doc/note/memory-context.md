@@ -119,6 +119,6 @@ set，如果是空闲的话，保存的是freelist的头。
 
 总的来说其内存的结构如图：
 
-![image](https://github.com/zhongxuanS/pg12.0-learning/doc/pic/f62fe885ad7504243b8d17050dd88053.png)
+![image](https://github.com/zhongxuanS/pg12.0-learning/blob/master/doc/pic/f62fe885ad7504243b8d17050dd88053.png)
 
 ### 精简版PG内存上下文
