@@ -929,6 +929,11 @@ TypeIsVisible(Oid typid)
  * If missing_ok is true, an empty list (NULL) is returned if the name was
  * schema- qualified with a schema that does not exist.  Likewise if no
  * candidate is found for other reasons.
+ *
+ * 展开的意思是当返回candidate的时候，这个candidate的函数参数中是否包含展开参数。
+ *
+ * 说实话这里的代码看名字比较好理解但是每个函数要做的事情太多太多，并不能从名字就能看出函数
+ * 要怎么做。PG里面不少函数都是大函数，比较不好理解。
  */
 FuncCandidateList
 FuncnameGetCandidates(List *names, int nargs, List *argnames,
@@ -964,6 +969,7 @@ FuncnameGetCandidates(List *names, int nargs, List *argnames,
 	}
 
 	/* Search syscache by name only */
+	/* 仅仅是名字去搜索 */
 	catlist = SearchSysCacheList1(PROCNAMEARGSNSP, CStringGetDatum(funcname));
 
 	for (i = 0; i < catlist->n_members; i++)
