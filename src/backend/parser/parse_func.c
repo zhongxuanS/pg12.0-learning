@@ -264,6 +264,14 @@ ParseFuncOrColumn(ParseState *pstate, List *funcname, List *fargs,
 
 	setup_parser_errposition_callback(&pcbstate, pstate, location);
 
+	/*
+	 * 这个函数负责解析函数原型
+	 * 从入参来看，一个函数原型字符串只能解析出：
+	 * 1. 函数名
+	 * 2. 函数参数列表
+	 * 3. 有名参数列表
+	 * 4. 参数个数
+	 */
 	fdresult = func_get_detail(funcname, fargs, argnames, nargs,
 							   actual_arg_types,
 							   !func_variadic, true,
@@ -1415,6 +1423,13 @@ func_get_detail(List *funcname,
 		*argdefaults = NIL;
 
 	/* Get list of possible candidates from namespace search */
+	/*
+	 *  负责找对应函数原型。
+	 *  注意到，并没有把函数参数列表作为找的依据，只是把有名参数和参数个数信息传过去了。
+	 *  这是因为参数类型是否匹配又涉及到隐式转换等判断。所以PG拆成了2个过程。先按照名字
+	 *  和参数个数匹配出候选。然后再逐个比对类型是否能一致。带上有名参数是因为有名参数
+	 *  在不用管参数类型的情况下也可以筛选一部分函数
+	 */
 	raw_candidates = FuncnameGetCandidates(funcname, nargs, fargnames,
 										   expand_variadic, expand_defaults,
 										   false);
