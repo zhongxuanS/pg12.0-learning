@@ -1010,6 +1010,10 @@ FuncnameGetCandidates(List *names, int nargs, List *argnames,
 				continue;		/* proc is not in search path */
 		}
 
+		/*
+		 * 比如说foo(a int, b variadic int[])
+		 * 如果调用的是foo(1,2,3,a:=4)是找不到match的。
+		 */
 		if (argnames != NIL)
 		{
 			/*
