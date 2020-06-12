@@ -9,7 +9,9 @@
 - [x] 解析函数调用
 - [x] 内存上下文
 - [x] 异常处理
+- [ ] flex和bison，解析SQL。生成pg的parsetree
+- [ ] wal日志
 - [ ] 列表
 - [ ] hash表
 - [ ] 系统表缓存机制
-- [ ] flex和bison，解析SQL。生成pg的parsetree。
+
